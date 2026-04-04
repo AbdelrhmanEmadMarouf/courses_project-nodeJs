@@ -1,24 +1,15 @@
 const express = require('express');
 const app = express();
 
+
+
 app.listen(5000,()=>{
     console.log('port is listining on 5000');
 });
 
+app.use(express.json()); //* tp parse request body into json
 
-const courses = [
-    {
-        id: 1,
-        title: "js course",
-        price: 1000
-    },
-    {
-        id: 2,
-        title: "react course",
-        price: 1000
-    }
-]
+let courseRouter = require('./routes/courses.routes');
 
-app.get('/api/courses',(req,res)=>{
-    res.json(courses);
-})
+
+app.use('/api/courses',courseRouter);  
