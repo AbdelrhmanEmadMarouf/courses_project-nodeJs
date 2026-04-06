@@ -10,7 +10,17 @@ const config = {
    driver: "ODBC Driver 18 for SQL Server", // Uncomment to use specific driver
 };
 
+const connectDB = async () => {
+    try {
+        await sql.connect(config);
+        console.log("Connected to SQL Server");
+    } catch (err) {
+        console.error("DB Connection Error:", err);
+    }
+};
+
 module.exports = {
     sql,
-    config
+    connectDB
 }
+

@@ -1,46 +1,65 @@
 const {validationResult } = require('express-validator');
+const {sql} = require('../confiq/DB'); 
+const utils = require('../utils/utils');
 
-const {sql,config} = require('../confiq/DB'); 
+
 
 
 const getAllCourses = async (req,res)=>{
 
 
     try {
-        await sql.connect(config);  
         const result = await sql.query`
-        SELECT TITLE , PRICE
+        SELECT * 
         FROM COURSES`;
-        res.json(result.recordset);
+        res.status(utils.HTTP_STATUS.OK)
+        .json({
+            status : utils.STATUS_TEXT.SUCCESS,
+            data : result.recordset,
+            code : utils.HTTP_STATUS.OK
+        });
     } catch (err) {
-        console.error(err);
+        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json({
+            status : utils.STATUS_TEXT.ERROR,
+            message :err.message,
+            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        })
     }
-
-    
 }
 
 const getCourse = async (req,res)=>{
 
-        const courseId =  parseInt(req.params.courseId);
+        const courseId =  req.params.courseId;
 
         try {
-        await sql.connect(config);  
         const result = await sql.query`
-        SELECT TITLE , PRICE 
+        SELECT * 
         FROM COURSES 
         WHERE COURSES.ID = ${courseId}`;
 
         if(result.recordset.length === 0){
-            res.status(404)
+        return res.status(utils.HTTP_STATUS.NOT_FOUND)
             .json({
-                msg : "course not found"
+                status : utils.STATUS_TEXT.FAIL,
+                message : utils.MESSAGES.COURSE_NOT_FOUND,
+                code : utils.HTTP_STATUS.NOT_FOUND
             })
-        }else{
-            res.json(result.recordset);
         }
+            res.status(utils.HTTP_STATUS.OK)
+            .json({
+                status : utils.STATUS_TEXT.SUCCESS,
+                data : result.recordset[0],
+                code : utils.HTTP_STATUS.OK
+            });  
 
     } catch (err) {
-        console.error(err);
+            res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .json({
+                status : utils.STATUS_TEXT.ERROR,
+                message : err.message,
+                code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+            })
     }
 }
 
@@ -48,8 +67,11 @@ const createCourse = async (req,res)=>{
 
         
         if(!validationResult(req).isEmpty()){
-            res.status(400)
-                .json({erros : validationResult(req)
+            res.status(utils.HTTP_STATUS.BAD_REQUEST)
+                .json({
+                    status : utils.STATUS_TEXT.FAIL,
+                    message : validationResult(req),
+                    code : utils.HTTP_STATUS.BAD_REQUEST
                 });
         
                 return;
@@ -59,96 +81,116 @@ const createCourse = async (req,res)=>{
     const courseTitle = newCourse.title;
     const coursePrice = newCourse.price;
 
-    try {
-        await sql.connect(config); 
-        
-        const result = await sql.query`
+    try { 
+        await sql.query`
                     INSERT INTO COURSES (TITLE,PRICE)
                     VALUES(${courseTitle},${coursePrice})
         `;
 
-        // status 201 : mean the request is handled successfully and the new item has been created
+        
 
-        res.status(201)
+        res.status(utils.HTTP_STATUS.CREATED)
         .json({
-                msg : "course added successfully",
+                status :utils.STATUS_TEXT.SUCCESS,
+                data : {
+                    TITLE : courseTitle ,
+                    PRICE : coursePrice
+                },
+                code : utils.HTTP_STATUS.CREATED
         });
     } catch (err) {
-        console.error(err);
+        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json({
+            status : utils.STATUS_TEXT.ERROR,
+            message : err.message,
+            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        })
     }
 
 }
 
 const editCourse = async(req,res)=>{
 
-    const courseId = parseInt(req.params.courseId);
+    const courseId = req.params.courseId;
     const requestBody =   req.body;
 
     try {
-
-        await sql.connect(config);  
         let course = await sql.query`
-            SELECT COURSES.TITLE , COURSES.PRICE 
+            SELECT *
             FROM COURSES
             WHERE COURSES.ID = ${courseId}`;
 
             if(course.recordset.length ===0){
-                res.json({
-                    msg : "Id Not Found"
-                })
+                return res.status(utils.HTTP_STATUS.NOT_FOUND)
+                    .json({
+                        status : utils.STATUS_TEXT.FAIL,
+                        message : utils.MESSAGES.COURSE_NOT_FOUND,
+                        code : utils.HTTP_STATUS.NOT_FOUND
+                    })
             }
-
-            
             course = {...course.recordset[0],...requestBody};
-            
-            const courseTitle = course.TITLE;
-            const coursePRICE = course.PRICE;
-            
+
             await sql.query`
                 UPDATE COURSES 
                 SET 
-                COURSES.TITLE =${courseTitle},
-                COURSES.PRICE = ${coursePRICE}
+                COURSES.TITLE =${course.TITLE},
+                COURSES.PRICE = ${course.PRICE}
                 WHERE COURSES.ID = ${courseId}
                 `;
 
-            res.status(200)
-            .json({msg : "successfull"
+            res.status(utils.HTTP_STATUS.OK)
+            .json({
+                status : utils.STATUS_TEXT.SUCCESS,
+                data : course,
+                code : utils.HTTP_STATUS.OK
             });
 
     } catch (err) {
-        console.error(err);
+        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json({
+            status : utils.STATUS_TEXT.ERROR,
+            message : err.message,
+            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        })
     }
 }
 
 const deleteCourse = async(req,res)=>{
 
-    const courseId = parseInt(req.params.courseId);
+    const courseId = req.params.courseId;
 
     try {
-        await sql.connect(config);  
-
         const course =  await sql.query`
-        SELECT * FROM COURSES
+        SELECT TITLE , PRICE FROM COURSES
         WHERE ID = ${courseId};
         `;
 
         if(course.recordset.length ===0){
-            res.json({
-                msg : "Id Not Found"
-            })
+            return  res.status(utils.HTTP_STATUS.NOT_FOUND)
+                .json({
+                    status : utils.STATUS_TEXT.FAIL,
+                    message : utils.MESSAGES.COURSE_NOT_FOUND,
+                    code : utils.HTTP_STATUS.NOT_FOUND
+                })
         }
 
         await sql.query`
         DELETE FROM COURSES
         WHERE ID = ${courseId};
 `;
-        res.status(200)
+        res.status(utils.HTTP_STATUS.OK)
         .json({
-            msg : "Course Deleted Successfully"
+            status : utils.STATUS_TEXT.SUCCESS,
+            data : null,
+            code : utils.HTTP_STATUS.OK
         });
     } catch (err) {
-        console.error(err);
+        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json({
+            status :utils.STATUS_TEXT.ERROR,
+            message : err.message,
+            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        });
     }
 
 }
@@ -159,4 +201,4 @@ module.exports = {
     createCourse,
     editCourse,
     deleteCourse
-}
+}   
