@@ -127,6 +127,18 @@ const deleteCourse = async(req,res)=>{
 
     try {
         await sql.connect(config);  
+
+        const course =  await sql.query`
+        SELECT * FROM COURSES
+        WHERE ID = ${courseId};
+        `;
+
+        if(course.recordset.length ===0){
+            res.json({
+                msg : "Id Not Found"
+            })
+        }
+
         await sql.query`
         DELETE FROM COURSES
         WHERE ID = ${courseId};
