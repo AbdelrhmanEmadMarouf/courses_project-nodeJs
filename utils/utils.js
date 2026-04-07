@@ -29,7 +29,8 @@ SERVICE_UNAVAILABLE: 503
 };
 
 const MESSAGES = {
-    COURSE_NOT_FOUND: "Course not found"
+    COURSE_NOT_FOUND: "Course not found",
+    ROUTE_NOT_FOUND : "Route not found"
 };
 
 

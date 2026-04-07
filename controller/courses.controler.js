@@ -8,10 +8,19 @@ const utils = require('../utils/utils');
 const getAllCourses = async (req,res)=>{
 
 
+    const queryParameters = req.query;
+
+    const limit = parseInt(queryParameters.limit) || 10;
+    const page =  parseInt(queryParameters.page) || 1 ;
+
+    const offset = limit * (page - 1);
+
     try {
         const result = await sql.query`
-        SELECT * 
-        FROM COURSES`;
+        SELECT *
+        FROM COURSES 
+        ORDER BY PRICE
+        OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
         res.status(utils.HTTP_STATUS.OK)
         .json({
             status : utils.STATUS_TEXT.SUCCESS,

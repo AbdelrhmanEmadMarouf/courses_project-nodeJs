@@ -1,8 +1,8 @@
 const sql = require('mssql/msnodesqlv8');
 
 const config = {
-    server: "localhost",
-    database: "COURSES",
+    server: process.env.DB_SERVER_NAME,
+    database: process.env.DB_NAME,
     options: {
         trustedConnection: true, // Set to true if using Windows Authentication
         trustServerCertificate: true, // Set to true if using self-signed certificates
