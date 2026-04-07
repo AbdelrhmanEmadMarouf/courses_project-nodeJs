@@ -9,7 +9,7 @@ const utils = require('./utils/utils');
 const startServer = async () => {
     await connectDB();
 
-    app.listen(process.env.SERVER_PORT, () => {
+    app.listen(process.env.SERVER_PORT || 4000, () => {
         console.log(`port is listening on ${process.env.SERVER_PORT}`);
     });
 };
