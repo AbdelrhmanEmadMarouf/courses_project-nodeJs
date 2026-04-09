@@ -25,6 +25,7 @@ app.use(express.json()); //* tp parse request body into json
 
 app.use('/api/courses',cors(corsOptions),courseRouter);  
 
+//globaler middle ware for not found routes
 app.use((req,res,next)=>{
     res.status(utils.HTTP_STATUS.NOT_FOUND)  
         .json({
@@ -32,6 +33,16 @@ app.use((req,res,next)=>{
             message : utils.MESSAGES.ROUTE_NOT_FOUND
         });
 });
+
+// global middleware for error handler
+app.use((err,req,res,next)=>{
+        res.status(err.statusCode || utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)  
+        .json({
+            status : err.statusMessage ||utils.STATUS_TEXT.ERROR,
+            message : err.message,
+            code : err.statusCode || utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        });
+})
 
 startServer();
 

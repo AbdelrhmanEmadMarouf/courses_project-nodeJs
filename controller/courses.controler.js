@@ -1,11 +1,12 @@
 const {validationResult } = require('express-validator');
 const {sql} = require('../confiq/DB'); 
 const utils = require('../utils/utils');
+const asyncWrapper = require('../middleware/asyncWrapper');
+const appError = require('../utils/appError');
 
 
 
-
-const getAllCourses = async (req,res)=>{
+const getAllCourses = asyncWrapper(async (req,res)=>{
 
 
     const queryParameters = req.query;
@@ -15,45 +16,43 @@ const getAllCourses = async (req,res)=>{
 
     const offset = limit * (page - 1);
 
-    try {
+    
         const result = await sql.query`
         SELECT *
         FROM COURSES 
         ORDER BY PRICE
         OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
+
         res.status(utils.HTTP_STATUS.OK)
         .json({
             status : utils.STATUS_TEXT.SUCCESS,
             data : result.recordset,
             code : utils.HTTP_STATUS.OK
         });
-    } catch (err) {
-        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json({
-            status : utils.STATUS_TEXT.ERROR,
-            message :err.message,
-            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
-        })
-    }
-}
+    
+})
 
-const getCourse = async (req,res)=>{
+const getCourse = asyncWrapper(async (req,res,next)=>{
 
         const courseId =  req.params.courseId;
 
-        try {
+
         const result = await sql.query`
         SELECT * 
         FROM COURSES 
         WHERE COURSES.ID = ${courseId}`;
 
+        // course not found
         if(result.recordset.length === 0){
-        return res.status(utils.HTTP_STATUS.NOT_FOUND)
-            .json({
-                status : utils.STATUS_TEXT.FAIL,
-                message : utils.MESSAGES.COURSE_NOT_FOUND,
-                code : utils.HTTP_STATUS.NOT_FOUND
-            })
+
+            const error=  appError.create(
+                utils.MESSAGES.COURSE_NOT_FOUND,
+                utils.STATUS_TEXT.FAIL,
+                utils.HTTP_STATUS.NOT_FOUND
+            )
+
+            return next(error);
+
         }
             res.status(utils.HTTP_STATUS.OK)
             .json({
@@ -61,36 +60,27 @@ const getCourse = async (req,res)=>{
                 data : result.recordset[0],
                 code : utils.HTTP_STATUS.OK
             });  
+});
 
-    } catch (err) {
-            res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
-            .json({
-                status : utils.STATUS_TEXT.ERROR,
-                message : err.message,
-                code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
-            })
-    }
-}
+const createCourse = asyncWrapper(async (req,res,next)=>{
 
-const createCourse = async (req,res)=>{
 
-        
+        // validation error
         if(!validationResult(req).isEmpty()){
-            res.status(utils.HTTP_STATUS.BAD_REQUEST)
-                .json({
-                    status : utils.STATUS_TEXT.FAIL,
-                    message : validationResult(req),
-                    code : utils.HTTP_STATUS.BAD_REQUEST
-                });
-        
-                return;
+
+                const error=  appError.create(
+                utils.MESSAGES = validationResult(req),
+                utils.STATUS_TEXT.FAIL,
+                utils.HTTP_STATUS.BAD_REQUEST
+                )
+            return next(error);
+
         }
 
     const newCourse = req.body;
     const courseTitle = newCourse.title;
     const coursePrice = newCourse.price;
 
-    try { 
         await sql.query`
                     INSERT INTO COURSES (TITLE,PRICE)
                     VALUES(${courseTitle},${coursePrice})
@@ -107,35 +97,29 @@ const createCourse = async (req,res)=>{
                 },
                 code : utils.HTTP_STATUS.CREATED
         });
-    } catch (err) {
-        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json({
-            status : utils.STATUS_TEXT.ERROR,
-            message : err.message,
-            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
-        })
-    }
 
-}
+})
 
-const editCourse = async(req,res)=>{
+const editCourse = asyncWrapper(async(req,res,next)=>{
 
     const courseId = req.params.courseId;
     const requestBody =   req.body;
 
-    try {
         let course = await sql.query`
             SELECT *
             FROM COURSES
             WHERE COURSES.ID = ${courseId}`;
 
+            // course not found
             if(course.recordset.length ===0){
-                return res.status(utils.HTTP_STATUS.NOT_FOUND)
-                    .json({
-                        status : utils.STATUS_TEXT.FAIL,
-                        message : utils.MESSAGES.COURSE_NOT_FOUND,
-                        code : utils.HTTP_STATUS.NOT_FOUND
-                    })
+
+            const error=  appError.create(
+            utils.MESSAGES.COURSE_NOT_FOUND,
+            utils.STATUS_TEXT.FAIL,
+            utils.HTTP_STATUS.NOT_FOUND
+            )
+            return next(error);
+
             }
             course = {...course.recordset[0],...requestBody};
 
@@ -154,55 +138,46 @@ const editCourse = async(req,res)=>{
                 code : utils.HTTP_STATUS.OK
             });
 
-    } catch (err) {
-        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json({
-            status : utils.STATUS_TEXT.ERROR,
-            message : err.message,
-            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
-        })
-    }
-}
+    
+})
 
-const deleteCourse = async(req,res)=>{
+const deleteCourse = asyncWrapper(async(req,res,next)=>{
 
     const courseId = req.params.courseId;
 
-    try {
+    
         const course =  await sql.query`
         SELECT TITLE , PRICE FROM COURSES
         WHERE ID = ${courseId};
         `;
 
+        // course not found
         if(course.recordset.length ===0){
-            return  res.status(utils.HTTP_STATUS.NOT_FOUND)
-                .json({
-                    status : utils.STATUS_TEXT.FAIL,
-                    message : utils.MESSAGES.COURSE_NOT_FOUND,
-                    code : utils.HTTP_STATUS.NOT_FOUND
-                })
+
+            const error=  appError.create(
+            utils.MESSAGES.COURSE_NOT_FOUND,
+            utils.STATUS_TEXT.FAIL,
+            utils.HTTP_STATUS.NOT_FOUND
+            )
+
+            return next(error);
+
+
         }
 
         await sql.query`
         DELETE FROM COURSES
         WHERE ID = ${courseId};
-`;
+        `;
+
         res.status(utils.HTTP_STATUS.OK)
         .json({
             status : utils.STATUS_TEXT.SUCCESS,
             data : null,
             code : utils.HTTP_STATUS.OK
         });
-    } catch (err) {
-        res.status(utils.HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json({
-            status :utils.STATUS_TEXT.ERROR,
-            message : err.message,
-            code : utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
-        });
-    }
 
-}
+})
 
 module.exports = {
     getAllCourses,
