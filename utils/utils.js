@@ -30,7 +30,9 @@ SERVICE_UNAVAILABLE: 503
 
 const MESSAGES = {
     COURSE_NOT_FOUND: "Course not found",
-    ROUTE_NOT_FOUND : "Route not found"
+    ROUTE_NOT_FOUND : "Route not found",
+    WRONG_EMAIL_FORMAT : "Wrong Email Format",
+    WROG_OTP_VALIDATION : "Wrong OTP Validation"
 };
 
 

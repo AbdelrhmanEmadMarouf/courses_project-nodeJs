@@ -12,5 +12,5 @@ let courses = [
 ]
 
 module.exports = {
-    courses
+    courses 
 }
