@@ -4,8 +4,35 @@ const asyncWrapper = require('../middleware/asyncWrapper');
 const appError = require('../utils/appError');
 const  validator = require('validator');
 const nodemailer = require("nodemailer");
+const  bcrypt = require("bcryptjs");
 
-const createUser = asyncWrapper(async(req,res,next)=>{
+
+const getAllusers =  asyncWrapper(async(req,res,next)=>{
+
+
+    const queryParameters = req.query;
+
+    const limit = parseInt(queryParameters.limit) || 10;
+    const page =  parseInt(queryParameters.page) || 1 ;
+
+    const offset = limit * (page - 1);
+
+    const result = await sql.query`
+    SELECT id,email,first_name,last_name
+    FROM USERS 
+    ORDER BY ID
+    OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
+
+    res.status(utils.HTTP_STATUS.OK)
+        .json({
+                status : utils.STATUS_TEXT.SUCCESS,
+                data :  result.recordset,
+                code :  utils.HTTP_STATUS.OK
+        })
+})
+
+
+const registration = asyncWrapper(async(req,res,next)=>{
 
     const newUser = req.body;
 
@@ -18,6 +45,8 @@ const createUser = asyncWrapper(async(req,res,next)=>{
                     )
                     return next(error);
     }
+
+
 
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
@@ -149,13 +178,17 @@ const validateOTP = asyncWrapper(async(req,res,next)=>{
 
     }
 
+    //* hashing password before storing in DB
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+
 await sql.query`
     INSERT INTO USERS(email, first_name, last_name, password)
     VALUES (
         ${req.body.email},
         ${req.body.first_name},
         ${req.body.last_name},
-        ${req.body.password}
+        ${hashedPassword}
     )
 `;
 
@@ -182,9 +215,56 @@ await sql.query`
 
 })
 
+const login = asyncWrapper(async(req,res,next)=>{
+
+    const email = req.body.email;
+    const password = req.body.password;
+
+    if(!email || !password){
+        const error=  appError.create(
+            utils.MESSAGES.REQUIRED_EMAIL_AND_PASSWORD,
+            utils.STATUS_TEXT.FAIL,
+            utils.HTTP_STATUS.BAD_REQUEST
+        )
+        return next(error);
+    }
+
+    //* hashing password before storing in DB
+  //  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+    const dbResult = await sql.query`
+        SELECT PASSWORD 
+        FROM USERS
+        WHERE email = ${email}
+    `;
+
+    if(!dbResult.recordset[0]){
+        const error=  appError.create(
+            utils.MESSAGES.USER_NOT_FOUND,
+            utils.STATUS_TEXT.FAIL,
+            utils.HTTP_STATUS.NOT_FOUND
+        )
+        return next(error); 
+    }
+
+    const dbHashedPassword = dbResult.recordset[0].PASSWORD
+
+    
+    //login password after hashing to matching it with the password that in DB
+    //* if the two password are matched ==> return true else return false
+    const loginStatus =  await bcrypt.compare(password, dbHashedPassword);
+
+
+    res.json({
+        loginStatus : loginStatus
+    })
+
+})
 
 
 module.exports = {
-    createUser,
-    validateOTP
+    registration,
+    validateOTP,
+    getAllusers,
+    login
 }

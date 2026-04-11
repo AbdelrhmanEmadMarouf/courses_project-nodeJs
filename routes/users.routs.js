@@ -6,9 +6,15 @@ const userController = require('../controller/userse.controller');
 
 
 router.route('/')
-        .post(userController.createUser);
+        .get(userController.getAllusers)
 
-router.route('/validate')
+router.route('/registration')
+        .post(userController.registration);
+
+router.route('/login')
+        .post(userController.login);
+
+router.route('/otpValidatation')
         .post(userController.validateOTP);
 
 

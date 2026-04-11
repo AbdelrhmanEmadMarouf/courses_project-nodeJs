@@ -32,7 +32,9 @@ const MESSAGES = {
     COURSE_NOT_FOUND: "Course not found",
     ROUTE_NOT_FOUND : "Route not found",
     WRONG_EMAIL_FORMAT : "Wrong Email Format",
-    WROG_OTP_VALIDATION : "Wrong OTP Validation"
+    WROG_OTP_VALIDATION : "Wrong OTP Validation",
+    REQUIRED_EMAIL_AND_PASSWORD : "Email and Password are required",
+    USER_NOT_FOUND : "The user is not exist"
 };
 
 
