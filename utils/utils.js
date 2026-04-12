@@ -37,7 +37,8 @@ const MESSAGES = {
     USER_NOT_FOUND : "The user is not exist",
     WRONG_PASSWORD : "Wrong Password",
     REQUIRED_TOKEN : "Required Token",
-    INVALID_TOKEN  : "In Valid Token"
+    INVALID_TOKEN  : "In Valid Token",
+    YOU_ARE_NOT_ALLOW : "You are not allwoed to do this operation"
 };
 
 

@@ -10,10 +10,6 @@ const sendOPT = require('../utils/senOTP');
 
 const getAllusers =  asyncWrapper(async(req,res,next)=>{
 
-
-  //  console.log(req.headers.authorization);
-
-
     const queryParameters = req.query;
 
     const limit = parseInt(queryParameters.limit) || 10;
@@ -22,7 +18,7 @@ const getAllusers =  asyncWrapper(async(req,res,next)=>{
     const offset = limit * (page - 1);
 
     const result = await sql.query`
-    SELECT id,email,first_name,last_name
+    SELECT id,email,first_name,last_name,role
     FROM USERS 
     ORDER BY ID
     OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
@@ -106,12 +102,13 @@ const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
 await sql.query`
-    INSERT INTO USERS(email, first_name, last_name, password)
+    INSERT INTO USERS(email, first_name, last_name, password,role)
     VALUES (
         ${req.body.email},
         ${req.body.first_name},
         ${req.body.last_name},
-        ${hashedPassword}
+        ${hashedPassword},
+        ${req.body.role}
     )
 `;
 
@@ -126,13 +123,15 @@ await sql.query`
         email : req.body.email ,
         first_name :req.body.first_name ,
         last_name : req.body.last_name,
-        password :req.body.password
+        password :req.body.password,
+        role : req.body.role
     };
 
     const accessToken = await generateJWT({
         email : req.body.email ,
         first_name :req.body.first_name ,
-        last_name : req.body.last_name
+        last_name : req.body.last_name,
+        role : req.body.role
         });
 
     res.json({
@@ -149,6 +148,8 @@ const login = asyncWrapper(async(req,res,next)=>{
     const email = req.body.email;
     const password = req.body.password;
 
+    
+
     if(!email || !password){
         const error=  appError.create(
             utils.MESSAGES.REQUIRED_EMAIL_AND_PASSWORD,
@@ -161,13 +162,16 @@ const login = asyncWrapper(async(req,res,next)=>{
     //* hashing password before storing in DB
   //  const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
+  
     const dbResult = await sql.query`
         SELECT * 
         FROM USERS
         WHERE email = ${email}
     `;
 
-    if(!dbResult.recordset[0].password){
+
+
+    if(!dbResult.recordset[0]){
         const error=  appError.create(
             utils.MESSAGES.USER_NOT_FOUND,
             utils.STATUS_TEXT.FAIL,
@@ -176,8 +180,12 @@ const login = asyncWrapper(async(req,res,next)=>{
         return next(error); 
     }
 
+ 
+    
 
     const dbHashedPassword = dbResult.recordset[0].password;
+
+
 
     
     //login password after hashing to matching it with the password that in DB
@@ -189,7 +197,8 @@ const login = asyncWrapper(async(req,res,next)=>{
         const accessToken = await generateJWT({
             email : req.body.email ,
             first_name :dbResult.recordset[0].first_name ,
-            last_name : dbResult.recordset[0].last_name
+            last_name : dbResult.recordset[0].last_name,
+            role : dbResult.recordset[0].role
         });
 
         return  res.status(utils.HTTP_STATUS.OK)

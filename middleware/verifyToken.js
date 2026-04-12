@@ -20,8 +20,9 @@ const verifyToken = async(req,res,next)=>{
     const token = authHeader.split(' ')[1];
 
     try{
-        //*if it doesn't throw an exception so it means that the validation is valid
-    await jwt.verify(token,process.env.SECRET_KEY);
+    //*if it doesn't throw an exception so it means that the validation is valid
+    const currentUser = jwt.verify(token,process.env.SECRET_KEY);
+    req.currentUser = currentUser;
     next();
 
     }catch{
@@ -35,9 +36,6 @@ const verifyToken = async(req,res,next)=>{
                     code :  utils.HTTP_STATUS.UNAUTHORIZED
             })
     }
-
-
-
 }
 
 module.exports = {
