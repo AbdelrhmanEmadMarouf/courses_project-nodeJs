@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userse.controller');
+const {verifyToken} = require('../middleware/verifyToken');
 
 
 
 
 router.route('/')
-        .get(userController.getAllusers)
+        .get(
+        verifyToken,
+        userController.getAllusers)
 
 router.route('/registration')
         .post(userController.registration);

@@ -3,11 +3,15 @@ const utils = require('../utils/utils');
 const asyncWrapper = require('../middleware/asyncWrapper');
 const appError = require('../utils/appError');
 const  validator = require('validator');
-const nodemailer = require("nodemailer");
 const  bcrypt = require("bcryptjs");
+const generateJWT = require('../utils/generateJWT');
+const sendOPT = require('../utils/senOTP');
 
 
 const getAllusers =  asyncWrapper(async(req,res,next)=>{
+
+
+  //  console.log(req.headers.authorization);
 
 
     const queryParameters = req.query;
@@ -46,88 +50,7 @@ const registration = asyncWrapper(async(req,res,next)=>{
                     return next(error);
     }
 
-
-
-    const transporter = nodemailer.createTransport({
-        host: "smtp.gmail.com",
-        port: 587,
-        secure: false, // use STARTTLS (upgrade connection to TLS after connecting)
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-});
-
-const otp = Math.floor(100000 + Math.random() * 900000);
-
-
-
-await transporter.sendMail({
-    from: `"Courses Platform" <${process.env.SMTP_USER}>`,
-    to: newUser.email,
-    subject: "Verify Your Email - Courses Platform",
-    text: `
-Hello ${newUser.first_name || ''},
-
-Welcome to our Courses Platform 🎓
-
-We're excited to have you! To complete your registration, please verify your email using the OTP below:
-
-Your OTP: ${otp}
-
-This code will expire in 5 minutes.
-
-If you didn’t request this, please ignore this email.
-
-Best regards,
-Courses Platform Team
-    `,
-    html: `
-    <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
-        <div style="max-width: 500px; margin: auto; background: #ffffff; padding: 30px; border-radius: 10px; text-align: center;">
-            
-            <h2 style="color: #333;">Welcome to Courses Platform 🎓</h2>
-            
-            <p style="color: #555; font-size: 15px;">
-                Hi ${newUser.first_name || 'there'}, <br><br>
-                We're excited to have you join our platform! 🚀<br>
-                To complete your registration, please verify your email address.
-            </p>
-
-            <p style="margin-top: 20px; color: #777;">
-                Use the OTP below:
-            </p>
-
-            <div style="
-                font-size: 28px;
-                font-weight: bold;
-                letter-spacing: 5px;
-                color: #2c7be5;
-                background: #eef4ff;
-                padding: 15px;
-                border-radius: 8px;
-                margin: 20px 0;
-                display: inline-block;
-            ">
-                ${otp}
-            </div>
-
-            <p style="color: #999; font-size: 13px;">
-                This code will expire in 5 minutes.
-            </p>
-
-            <hr style="margin: 25px 0; border: none; border-top: 1px solid #eee;" />
-
-            <p style="color: #aaa; font-size: 12px;">
-                If you did not request this email, you can safely ignore it.
-            </p>
-
-        </div>
-    </div>
-    `
-});
-
-
+const otp = await sendOPT(newUser);
 
 await sql.query`
     INSERT INTO OTP (OTP)
@@ -157,16 +80,16 @@ const data = {
 
 const validateOTP = asyncWrapper(async(req,res,next)=>{
 
-    const id = req.body.id; 
-    const otp = req.body.otp; 
+const otpId = req.body.otpId; 
+const otp = req.body.otp; 
 
-    const result = await sql.query`
+const result = await sql.query`
         SELECT * FROM OTP
-        WHERE id = ${id} AND OTP = ${otp}
+        WHERE id = ${otpId} AND OTP = ${otp}
     `;
 
 
-    if(result.recordset.length === 0){
+if(result.recordset.length === 0){
 
         const error=  appError.create(
             utils.MESSAGES.WROG_OTP_VALIDATION,
@@ -178,8 +101,8 @@ const validateOTP = asyncWrapper(async(req,res,next)=>{
 
     }
 
-    //* hashing password before storing in DB
-    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+//* hashing password before storing in DB
+const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
 await sql.query`
@@ -192,13 +115,12 @@ await sql.query`
     )
 `;
 
-
 //* delte the otp to garante that is won't use after this process
 await sql.query`
         DELETE FROM OTP 
-        WHERE ID = ${id}
+        WHERE ID = ${otpId}
 `;
-    
+
 
     const userData = {
         email : req.body.email ,
@@ -207,10 +129,17 @@ await sql.query`
         password :req.body.password
     };
 
+    const accessToken = await generateJWT({
+        email : req.body.email ,
+        first_name :req.body.first_name ,
+        last_name : req.body.last_name
+        });
+
     res.json({
         status : utils.STATUS_TEXT.SUCCESS,
-        data :  userData,
-        code :  utils.HTTP_STATUS.CREATED  
+        data  :  userData,
+        code  :  utils.HTTP_STATUS.CREATED  ,
+        accessToken : accessToken
     })
 
 })
@@ -233,12 +162,12 @@ const login = asyncWrapper(async(req,res,next)=>{
   //  const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
     const dbResult = await sql.query`
-        SELECT PASSWORD 
+        SELECT * 
         FROM USERS
         WHERE email = ${email}
     `;
 
-    if(!dbResult.recordset[0]){
+    if(!dbResult.recordset[0].password){
         const error=  appError.create(
             utils.MESSAGES.USER_NOT_FOUND,
             utils.STATUS_TEXT.FAIL,
@@ -247,17 +176,48 @@ const login = asyncWrapper(async(req,res,next)=>{
         return next(error); 
     }
 
-    const dbHashedPassword = dbResult.recordset[0].PASSWORD
+
+    const dbHashedPassword = dbResult.recordset[0].password;
 
     
     //login password after hashing to matching it with the password that in DB
     //* if the two password are matched ==> return true else return false
     const loginStatus =  await bcrypt.compare(password, dbHashedPassword);
 
+    if(loginStatus){
 
-    res.json({
-        loginStatus : loginStatus
-    })
+        const accessToken = await generateJWT({
+            email : req.body.email ,
+            first_name :dbResult.recordset[0].first_name ,
+            last_name : dbResult.recordset[0].last_name
+        });
+
+        return  res.status(utils.HTTP_STATUS.OK)
+        .json({
+                status : utils.STATUS_TEXT.SUCCESS,
+                data :  {
+                    accessToken : accessToken
+                },
+                code :  utils.HTTP_STATUS.OK
+        })
+
+        }
+
+
+    return  res.status(utils.HTTP_STATUS.UNAUTHORIZED)
+        .json({
+                status : utils.STATUS_TEXT.FAIL,
+                data :  {
+                    accessToken : null
+                },
+                message : utils.MESSAGES.WRONG_PASSWORD,
+                code :  utils.HTTP_STATUS.UNAUTHORIZED
+        })
+
+
+
+
+
 
 })
 

@@ -34,7 +34,10 @@ const MESSAGES = {
     WRONG_EMAIL_FORMAT : "Wrong Email Format",
     WROG_OTP_VALIDATION : "Wrong OTP Validation",
     REQUIRED_EMAIL_AND_PASSWORD : "Email and Password are required",
-    USER_NOT_FOUND : "The user is not exist"
+    USER_NOT_FOUND : "The user is not exist",
+    WRONG_PASSWORD : "Wrong Password",
+    REQUIRED_TOKEN : "Required Token",
+    INVALID_TOKEN  : "In Valid Token"
 };
 
 
