@@ -3,6 +3,8 @@ const utils = require('../utils/utils');
 
 const verifyToken = async(req,res,next)=>{
 
+    console.log('test');
+
     const authHeader = req.headers['Authorization'] || req.headers['authorization'];
 
     if(!authHeader){
