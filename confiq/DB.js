@@ -1,13 +1,15 @@
-const sql = require('mssql/msnodesqlv8');
+const sql = require('mssql');
 
 const config = {
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
     server: process.env.DB_SERVER_NAME,
     database: process.env.DB_NAME,
+    port: 1433,
     options: {
-        trustedConnection: true, // Set to true if using Windows Authentication
-        trustServerCertificate: true, // Set to true if using self-signed certificates
-    },
-   driver: "ODBC Driver 18 for SQL Server", // Uncomment to use specific driver
+        encrypt: false, 
+        trustServerCertificate: true
+    }
 };
 
 const connectDB = async () => {
