@@ -25,14 +25,14 @@ const verifyToken = async(req,res,next)=>{
     req.currentUser = currentUser;
     next();
 
-    }catch{
+    }catch(err){
         return  res.status(utils.HTTP_STATUS.UNAUTHORIZED)
             .json({
                     status : utils.STATUS_TEXT.FAIL,
                     data :  {
                         accessToken : null
                     },
-                    message : utils.MESSAGES.INVALID_TOKEN,
+                    message : err.message,
                     code :  utils.HTTP_STATUS.UNAUTHORIZED
             })
     }

@@ -6,6 +6,7 @@ const  validator = require('validator');
 const  bcrypt = require("bcryptjs");
 const generateJWT = require('../utils/generateJWT');
 const sendOPT = require('../utils/senOTP');
+const {generateRefreshToken} = require('../utils/generateRefreshToken');
 
 
 const getAllusers =  asyncWrapper(async(req,res,next)=>{
@@ -101,6 +102,7 @@ if(result.recordset.length === 0){
 const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
+
 await sql.query`
     INSERT INTO USERS(email, first_name, last_name, password,role)
     VALUES (
@@ -112,33 +114,51 @@ await sql.query`
     )
 `;
 
+
+
+let userId = await sql.query`
+    SELECT id 
+    FROM USERS 
+    WHERE email = ${req.body.email}
+`;
+
+
+const userData = {
+        email : req.body.email ,
+        first_name :req.body.first_name ,
+        last_name : req.body.last_name,
+        password :req.body.password,
+        role : req.body.role,
+        id : userId.recordset[0].id
+    };
+
+
+
+
+
+const accessToken =  generateJWT(userData);
+const refreshToken = generateRefreshToken(userData);
+
+
+await sql.query`
+UPDATE USERS
+SET refresh_token = ${refreshToken}
+WHERE ID = ${userData.id}`;
+
+
+
 //* delte the otp to garante that is won't use after this process
 await sql.query`
         DELETE FROM OTP 
         WHERE ID = ${otpId}
 `;
 
-
-    const userData = {
-        email : req.body.email ,
-        first_name :req.body.first_name ,
-        last_name : req.body.last_name,
-        password :req.body.password,
-        role : req.body.role
-    };
-
-    const accessToken = await generateJWT({
-        email : req.body.email ,
-        first_name :req.body.first_name ,
-        last_name : req.body.last_name,
-        role : req.body.role
-        });
-
     res.json({
         status : utils.STATUS_TEXT.SUCCESS,
         data  :  userData,
         code  :  utils.HTTP_STATUS.CREATED  ,
-        accessToken : accessToken
+        accessToken : accessToken ,
+        refreshToken : refreshToken
     })
 
 })
@@ -162,7 +182,7 @@ const login = asyncWrapper(async(req,res,next)=>{
     //* hashing password before storing in DB
   //  const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
-  
+
     const dbResult = await sql.query`
         SELECT * 
         FROM USERS
@@ -180,32 +200,38 @@ const login = asyncWrapper(async(req,res,next)=>{
         return next(error); 
     }
 
- 
-    
-
     const dbHashedPassword = dbResult.recordset[0].password;
 
-
-
-    
     //login password after hashing to matching it with the password that in DB
     //* if the two password are matched ==> return true else return false
     const loginStatus =  await bcrypt.compare(password, dbHashedPassword);
 
-    if(loginStatus){
-
-        const accessToken = await generateJWT({
+    const user = {
             email : req.body.email ,
             first_name :dbResult.recordset[0].first_name ,
             last_name : dbResult.recordset[0].last_name,
-            role : dbResult.recordset[0].role
-        });
+            role : dbResult.recordset[0].role,
+            id : dbResult.recordset[0].id
+        };
+
+
+    if(loginStatus){
+
+        const accessToken =  generateJWT(user);
+        const refreshToken = generateRefreshToken(user);
+
+        await sql.query`
+        UPDATE USERS
+        SET refresh_token = ${refreshToken}
+        WHERE ID = ${user.id}
+        `
 
         return  res.status(utils.HTTP_STATUS.OK)
         .json({
                 status : utils.STATUS_TEXT.SUCCESS,
                 data :  {
-                    accessToken : accessToken
+                    accessToken : accessToken,
+                    refreshToken : refreshToken
                 },
                 code :  utils.HTTP_STATUS.OK
         })

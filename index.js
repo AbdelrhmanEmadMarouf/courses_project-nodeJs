@@ -4,6 +4,7 @@ const app = express();
 const {connectDB} = require('./confiq/DB');
 let courseRouter = require('./routes/courses.routes');
 const userRouter = require('./routes/users.routs');
+const authRouter = require('./routes/auth.routes');
 const utils = require('./utils/utils');
 const cors = require('cors')
 
@@ -26,6 +27,9 @@ app.use(express.json()); //* tp parse request body into json
 
 app.use('/api/courses',cors(corsOptions),courseRouter);  
 app.use('/api/users',cors(corsOptions),userRouter);  
+app.use('/api/auth',cors(corsOptions), authRouter);
+
+
 
 //globaler middle ware for not found routes
 app.use((req,res,next)=>{

@@ -1,15 +1,12 @@
 const jwt = require('jsonwebtoken');
 
-module.exports = async(payload)=>{
+module.exports = (payload)=>{
 
     //* generate JWT Token
 
-    return await jwt.sign(
-        payload
-        , process.env.SECRET_KEY,
-        { expiresIn: '5m' });
-
-        
-
+    return jwt.sign(
+        payload,
+        process.env.SECRET_KEY,
+        { expiresIn: '1m' });
 }
 
