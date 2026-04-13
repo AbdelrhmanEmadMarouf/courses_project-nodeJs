@@ -40,7 +40,8 @@ const MESSAGES = {
     INVALID_TOKEN  : "Invalid Token",
     INVALID_REFRESH_TOKEN  : "Invalid refresh token",
     YOU_ARE_NOT_ALLOW : "You are not allwoed to do this operation",
-    REFRESH_TOKEN_NOT_FOUND : "Refresh Token Not Founded"
+    REFRESH_TOKEN_NOT_FOUND : "Refresh Token Not Founded",
+    WRONG_FILE_TYPE : "invalied uploaded file type"
 };
 
 

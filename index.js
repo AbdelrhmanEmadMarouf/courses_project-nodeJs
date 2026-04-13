@@ -7,6 +7,7 @@ const userRouter = require('./routes/users.routs');
 const authRouter = require('./routes/auth.routes');
 const utils = require('./utils/utils');
 const cors = require('cors')
+const path = require('path');
 
 
 var corsOptions = {
@@ -28,6 +29,7 @@ app.use(express.json()); //* tp parse request body into json
 app.use('/api/courses',cors(corsOptions),courseRouter);  
 app.use('/api/users',cors(corsOptions),userRouter);  
 app.use('/api/auth',cors(corsOptions), authRouter);
+app.use('/uploads/',express.static(path.join(__dirname,'uploads')));
 
 
 

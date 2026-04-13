@@ -13,7 +13,7 @@ const getAllusers =  asyncWrapper(async(req,res,next)=>{
     const offset = limit * (page - 1);
 
     const result = await sql.query`
-    SELECT id,email,first_name,last_name,role
+    SELECT id,email,first_name,last_name,role,Avatar
     FROM USERS 
     ORDER BY ID
     OFFSET ${offset} ROWS FETCH NEXT ${limit} ROWS ONLY;`;

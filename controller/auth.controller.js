@@ -8,6 +8,7 @@ const generateJWT = require('../utils/generateJWT');
 const {generateRefreshToken} = require('../utils/generateRefreshToken');
 const  validator = require('validator');
 const sendOPT = require('../utils/senOTP');
+const fs = require('fs');
 
 
 const login = asyncWrapper(async(req,res,next)=>{
@@ -133,6 +134,7 @@ const refreshTokenHandler = asyncWrapper(async(req,res,next)=>{
 const registration = asyncWrapper(async(req,res,next)=>{
 
     const newUser = req.body;
+    
 
     if(!validator.isEmail(newUser.email)){
 
@@ -157,6 +159,7 @@ const result =await sql.query`
     WHERE OTP = ${otp}
 `;
 
+delete newUser.password;
 
 const data = {
     otpId : result.recordset[0].id,
@@ -191,6 +194,15 @@ if(result.recordset.length === 0){
             utils.HTTP_STATUS.NOT_FOUND
         )
 
+    /*
+    1- the file is already uploaded into the server 
+    2- here the validation of the otp is faild so we deleted this file from the 
+        server 
+    */
+    if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+    }
+
         return next(error);
 
     }
@@ -199,17 +211,48 @@ if(result.recordset.length === 0){
 const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
+let avatarPath = null;
 
+
+if (req.file) {
+    avatarPath = `/uploads/${req.file.filename}`;
+}else{
+    avatarPath = `/uploads/personal image.jpeg`;
+}
+
+try{
 await sql.query`
-    INSERT INTO USERS(email, first_name, last_name, password,role)
+    INSERT INTO USERS(email, first_name, last_name, password,role,Avatar)
     VALUES (
         ${req.body.email},
         ${req.body.first_name},
         ${req.body.last_name},
         ${hashedPassword},
-        ${req.body.role}
+        ${req.body.role},
+        ${avatarPath}
     )
 `;
+}catch(err){
+
+        const error=  appError.create(
+            err.message,
+            utils.STATUS_TEXT.FAIL,
+            utils.HTTP_STATUS.INTERNAL_SERVER_ERROR
+        )
+
+    /*
+    1- the file is already uploaded into the server 
+    2- here the validation of the otp is faild so we deleted this file from the 
+        server 
+    */
+    if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+    }
+
+        return next(error);
+}
+
+
 
 
 
@@ -219,28 +262,22 @@ let userId = await sql.query`
     WHERE email = ${req.body.email}
 `;
 
+const payload = { 
+    email : req.body.email,
+    first_name :req.body.first_name ,
+    last_name : req.body.last_name,
+    role : req.body.role,
+    id : userId.recordset[0].id,
+};
 
-const userData = {
-        email : req.body.email ,
-        first_name :req.body.first_name ,
-        last_name : req.body.last_name,
-        password :req.body.password,
-        role : req.body.role,
-        id : userId.recordset[0].id
-    };
-
-
-
-
-
-const accessToken =  generateJWT(userData);
-const refreshToken = generateRefreshToken(userData);
+const accessToken =  generateJWT(payload);
+const refreshToken = generateRefreshToken(payload);
 
 
 await sql.query`
 UPDATE USERS
 SET refresh_token = ${refreshToken}
-WHERE ID = ${userData.id}`;
+WHERE ID = ${userId.recordset[0].id}`;
 
 
 
@@ -252,10 +289,13 @@ await sql.query`
 
     res.json({
         status : utils.STATUS_TEXT.SUCCESS,
-        data  :  userData,
+        data  :  {
+            ...payload ,
+            avatar : avatarPath
+        },
         code  :  utils.HTTP_STATUS.CREATED  ,
         accessToken : accessToken ,
-        refreshToken : refreshToken
+        refreshToken : refreshToken,
     })
 
 })
