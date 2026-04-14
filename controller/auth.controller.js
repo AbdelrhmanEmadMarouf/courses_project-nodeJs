@@ -159,7 +159,6 @@ const result =await sql.query`
     WHERE OTP = ${otp}
 `;
 
-delete newUser.password;
 
 const data = {
     otpId : result.recordset[0].id,
