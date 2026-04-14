@@ -52,7 +52,7 @@ const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
     //login password after hashing to matching it with the password that in DB
     //* if the two password are matched ==> return true else return false
-    const loginStatus =  await bcrypt.compare(password, dbHashedPassword);
+    const loginStatus =  await bcrypt.compare(hashedPassword, dbHashedPassword);
 
     const user = {
             email : req.body.email ,
