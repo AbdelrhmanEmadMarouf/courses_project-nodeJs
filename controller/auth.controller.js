@@ -28,7 +28,7 @@ const login = asyncWrapper(async(req,res,next)=>{
     }
 
     //* hashing password before storing in DB
-const hashedPassword = await bcrypt.hash(req.body.password, 10);
+//const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
     const dbResult = await sql.query`
@@ -52,7 +52,7 @@ const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
     //login password after hashing to matching it with the password that in DB
     //* if the two password are matched ==> return true else return false
-    const loginStatus =  await bcrypt.compare(hashedPassword, dbHashedPassword);
+    const loginStatus =  await bcrypt.compare(password, dbHashedPassword);
 
     const user = {
             email : req.body.email ,
