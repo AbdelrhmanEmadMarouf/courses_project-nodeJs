@@ -28,7 +28,7 @@ const login = asyncWrapper(async(req,res,next)=>{
     }
 
     //* hashing password before storing in DB
-  //  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+const hashedPassword = await bcrypt.hash(req.body.password, 10);
 
 
     const dbResult = await sql.query`
